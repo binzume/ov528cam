@@ -42,6 +42,7 @@ void handleNotFound() {
 }
 
 void handleInit() {
+  uploadTicker.detach();
   digitalWrite(led, 1);
 
   camera_sync();
@@ -90,7 +91,11 @@ void upload() {
 void handlePostStart() {
   digitalWrite(led, 1);
 
-  uploadTicker.attach_ms(60000, upload);
+  int d = atoi(server.arg("interval").c_str()) * 1000;
+  if (d <= 0) {
+    d = 60000;
+  }
+  uploadTicker.attach_ms(d, upload);
 
   server.send(200, "text/plain", "start!");
   digitalWrite(led, 0);
