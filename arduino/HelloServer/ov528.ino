@@ -161,7 +161,7 @@ retry:
   return 1;
 }
 
-uint8_t camera_get_data_p(void) {
+uint8_t camera_get_data_p(const String &post_url) {
   uint32_t data_size;
   uint8_t buf1[6];
   uint8_t buf[OV528_PKT_SZ];
@@ -182,10 +182,10 @@ uint8_t camera_get_data_p(void) {
   uint16_t num_packet = (data_size + (OV528_PKT_SZ - 6 - 1)) / (OV528_PKT_SZ - 6);
 
 
-  HttpClient client(1);
+  HttpClient client;
   client.setContentLength(data_size);
-  client.addHeader("Content-Type", "image/jpeg");
-  HttpResponse res = client.request("POST", "www.binzume.net", 9000, "/upload", true);
+  client.setHeader("Content-Type", "image/jpeg");
+  HttpResponse res = client.post_start(post_url);
 
   for (uint16_t i = 0; i < num_packet; i++) {
     uint8_t retry_cnt = 0;

@@ -7,6 +7,9 @@
 
 const char* ssid = "binzume.kstm.org";
 const char* password = "************";
+const char* POST_URL = "http://www.binzume.net:9000/post?apikey=hoge";
+const char* HEARTBEAT_URL = "http://www.binzume.net:9000/hb?apikey=hoge";
+
 MDNSResponder mdns;
 
 ESP8266WebServer server(80);
@@ -20,7 +23,6 @@ void handleRoot() {
   server.send(200, "text/plain", "hello from esp8266!");
   digitalWrite(led, 0);
 }
-
 
 void handleNotFound() {
   digitalWrite(led, 1);
@@ -63,21 +65,19 @@ void handleGetJpeg() {
   digitalWrite(led, 0);
 }
 
-
 void handlePostPhoto() {
   digitalWrite(led, 1);
-  camera_get_data_p();
+  camera_get_data_p(POST_URL);
   server.send(200, "text/plain", "ok!");
   digitalWrite(led, 0);
 }
 
-
 void handlePostTest() {
   digitalWrite(led, 1);
-  HttpClient client(1);
-  client.post("www.binzume.net", 9000, "/upload", "POST from esp-wroom-02");
-  
-  server.send(200, "text/plain", "ok!");  
+  HttpClient req;
+  req.post(POST_URL, "POST from esp-wroom-02");
+
+  server.send(200, "text/plain", "ok!");
   digitalWrite(led, 0);
 }
 
@@ -91,37 +91,31 @@ void handlePostStart() {
   digitalWrite(led, 1);
 
   uploadTicker.attach_ms(60000, upload);
-  
-  server.send(200, "text/plain", "start!");  
+
+  server.send(200, "text/plain", "start!");
   digitalWrite(led, 0);
 }
 
-void setup(void){
+void setup(void) {
   pinMode(led, OUTPUT);
   digitalWrite(led, 0);
   Serial.begin(115200);
   WiFi.begin(ssid, password);
 
-//  camera_sync();
-//  camera_init();
-
-//  Serial.println("");
+  //  camera_sync();
+  //  camera_init();
 
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-//  Serial.println("");
-//  Serial.print("Connected to ");
-//  Serial.println(ssid);
-//  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  
+
   if (mdns.begin("esp8266", WiFi.localIP())) {
-//    Serial.println("MDNS responder started");
+    // Serial.println("MDNS responder started");
   }
-  
+
   server.on("/", handleRoot);
   server.on("/init", handleInit); // init camera
   server.on("/snap", handleSnapshot); // snapshot
@@ -130,29 +124,26 @@ void setup(void){
   server.on("/posttest", handlePostTest); // post jpeg
   server.on("/start", handlePostStart); // post jpeg
 
-  server.on("/inline", [](){
+  server.on("/inline", []() {
     server.send(200, "text/plain", "this works as well");
   });
 
   server.onNotFound(handleNotFound);
-  
-  server.begin();
-  // Serial.println("HTTP server started");
 
-  HttpClient client(1);
-  client.get("www.binzume.net", 9000, "/hb");
+  server.begin();
+
+  HttpClient client;
+  client.get(String(HEARTBEAT_URL) + "&ip=" + WiFi.localIP());
+  Serial.println("started");
 }
- 
-void loop(void){
+
+void loop(void) {
   server.handleClient();
   if (upload_trig) {
     upload_trig = 0;
     camera_snapshot();
-    camera_get_data_p();
+    camera_get_data_p(POST_URL);
     // Serial.print("POST.");
-    // HttpClient client(1);
-    // client.post("www.binzume.net", 9000, "/upload", "POST from esp-wroom-02");
-    // Serial.print(".");
   }
 }
 
