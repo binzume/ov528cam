@@ -12,7 +12,11 @@ ESP-WROOM-02と組み合わせてWebブラウザで写真を表示．
 
 Arduino IDE に https://github.com/esp8266/Arduino をインストールしてESP-WROOM-02に書き込んでください．
 
+![回路図](circuit/wificamera.png)
+
 Arduinoと言いつつ，Arduinoは不要です．
+
+Qiita: http://qiita.com/binzume
 
 
 ### avr

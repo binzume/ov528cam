@@ -125,13 +125,9 @@ void setup(void) {
   server.on("/init", handleInit); // init camera
   server.on("/snap", handleSnapshot); // snapshot
   server.on("/get", handleGetJpeg); // get jpeg
-  server.on("/post", handlePostPhoto); // post jpeg
+  server.on("/post", handlePostPhoto); // post jpeg(test)
   server.on("/posttest", handlePostTest); // post jpeg
   server.on("/start", handlePostStart); // post jpeg
-
-  server.on("/inline", []() {
-    server.send(200, "text/plain", "this works as well");
-  });
 
   server.onNotFound(handleNotFound);
 

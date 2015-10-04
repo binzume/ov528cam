@@ -148,8 +148,7 @@ retry:
       }
     }
 
-    // Send data to SPI master.
-
+    // Send image data.
     String s;
     s.reserve(OV528_PKT_SZ);
     for (int p = 4; p < len - 2; p++) {
@@ -213,8 +212,7 @@ retry:
       }
     }
 
-    // Send data to SPI master.
-
+    // Send image data.
     String s;
     s.reserve(OV528_PKT_SZ);
     for (int p = 4; p < len - 2; p++) {
