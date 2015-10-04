@@ -16,7 +16,7 @@ Arduino IDE に https://github.com/esp8266/Arduino をインストールしてES
 
 Arduinoと言いつつ，Arduinoは不要です．
 
-Qiita: http://qiita.com/binzume
+詳しくはQiitaの記事を参照してください: http://qiita.com/binzume/items/e301c12b7ec1486d7c42
 
 
 ### avr
