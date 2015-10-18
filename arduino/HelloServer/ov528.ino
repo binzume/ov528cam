@@ -1,23 +1,22 @@
 
 #include "ov528.h"
-#include "HttpClient.h"
 
 // ov528 protocol.
 #define OV528_BAUD 115200 // 57600 115200
-#define OV528_PKT_SZ     240
-#define OV528_SIZE       OV528_SIZE_VGA
+#define OV528_PKT_SZ     500
+#define OV528_SIZE       OV528_SIZE_QVGA
 #define OV528_ADDR       (0<<5)
 
 #define ACK_TIMEOUT 500
 #define RETRY_LIMIT 200
 #define TIMEOUT 500
 
-void writeBytes(uint8_t buf[], uint8_t len) {
+void writeBytes(uint8_t buf[], uint16_t len) {
   Serial.write(buf, len);
 }
 
-uint8_t readBytes(uint8_t buf[], uint8_t len, uint16_t timeout_ms) {
-  uint8_t i;
+uint16_t readBytes(uint8_t buf[], uint16_t len, uint16_t timeout_ms) {
+  uint16_t i;
   uint8_t subms = 0;
   for (i = 0; i < len; i++) {
     while (Serial.available() == 0) {
@@ -97,10 +96,7 @@ void camera_snapshot(void) {
   send_cmd_with_ack(OV528_CMD_SNAPSHOT, 0, 0, 0, 0);
 }
 
-
-
-
-uint8_t camera_get_data(void) {
+uint8_t camera_get_data(void *ctx, SIZE_FUN size_fun, WRITE_FUN write_fun) {
   uint32_t data_size;
   uint8_t buf1[6];
   uint8_t buf[OV528_PKT_SZ];
@@ -119,8 +115,7 @@ uint8_t camera_get_data(void) {
 
   uint16_t num_packet = (data_size + (OV528_PKT_SZ - 6 - 1)) / (OV528_PKT_SZ - 6);
 
-  server.setContentLength(data_size);
-  server.send(200, "image/jpeg", "");
+  size_fun(ctx, data_size);
 
   for (uint16_t i = 0; i < num_packet; i++) {
     uint8_t retry_cnt = 0;
@@ -149,80 +144,9 @@ retry:
     }
 
     // Send image data.
-    String s;
-    s.reserve(OV528_PKT_SZ);
-    for (int p = 4; p < len - 2; p++) {
-      s += (char)buf[p];
-    }
-    server.sendContent(s);
+    write_fun(ctx, buf+4, len-6);
   }
   sendCmd(OV528_CMD_ACK, 0, 0, 0xf0, 0xf0);
-  return 1;
-}
-
-uint8_t camera_get_data_p(const String &post_url) {
-  uint32_t data_size;
-  uint8_t buf1[6];
-  uint8_t buf[OV528_PKT_SZ];
-
-  while (1) {
-    send_cmd_with_ack(OV528_CMD_GET_PIC, OV528_PIC_TYPE_SNAPSHOT, 0, 0, 0);
-
-    if (readBytes(buf1, 6, 1000) != 6) {
-      continue;
-    }
-    if (buf1[0] == 0xaa && buf1[1] == (OV528_CMD_DATA | OV528_ADDR) && buf1[2] == 0x01) {
-      data_size = (buf1[3]) | (buf1[4] << 8) | ((uint32_t)buf1[5] << 16);
-      break;
-    }
-  }
-
-
-  uint16_t num_packet = (data_size + (OV528_PKT_SZ - 6 - 1)) / (OV528_PKT_SZ - 6);
-
-
-  HttpClient client;
-  client.setContentLength(data_size);
-  client.setHeader("Content-Type", "image/jpeg");
-  HttpResponse res = client.post_start(post_url);
-
-  for (uint16_t i = 0; i < num_packet; i++) {
-    uint8_t retry_cnt = 0;
-
-retry:
-    recv_clear();
-    sendCmd(OV528_CMD_ACK, 0, 0,  i & 0xff, (i >> 8) & 0xff);
-
-    // recv data : 0xaa, OV528_CMD_DATA, len16, data..., sum?
-    uint16_t len = readBytes(buf, OV528_PKT_SZ, 200);
-
-    // checksum
-    uint8_t sum = 0;
-    for (uint16_t y = 0; y < len - 2; y++) {
-      sum += buf[y];
-    }
-
-    if (sum != buf[len - 2]) {
-      if (++retry_cnt < RETRY_LIMIT) {
-        delay(100);
-        goto retry;
-      } else {
-        sendCmd(OV528_CMD_ACK, 0, 0, 0xf0, 0xf0);
-        return 0;
-      }
-    }
-
-    // Send image data.
-    String s;
-    s.reserve(OV528_PKT_SZ);
-    for (int p = 4; p < len - 2; p++) {
-      s += (char)buf[p];
-    }
-    client.print(s);
-  }
-  sendCmd(OV528_CMD_ACK, 0, 0, 0xf0, 0xf0);
-  client.print("\r\n");
-  client.readResponse(res);
   return 1;
 }
 

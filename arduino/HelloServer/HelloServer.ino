@@ -4,6 +4,7 @@
 #include <ESP8266mDNS.h>
 #include <Ticker.h>
 #include "HttpClient.h"
+#include "ov528.h"
 
 const char* ssid = "binzume.kstm.org";
 const char* password = "************";
@@ -59,11 +60,37 @@ void handleSnapshot() {
   digitalWrite(led, 0);
 }
 
-
 void handleGetJpeg() {
   digitalWrite(led, 1);
-  camera_get_data();
+  WiFiClient client = server.client();
+  // client.setNoDelay(true);
+  camera_get_data(NULL, [](void* ctx, uint32_t sz){
+    server.setContentLength(sz);
+    server.send(200, "image/jpeg", "");
+  }, [](void* ctx, uint8_t *buf, uint16_t len){
+    WiFiClient client = server.client();
+    if (client.connected()) {
+      client.write(static_cast<const uint8_t*>(buf), len);
+    }
+  });
+  client.flush();
   digitalWrite(led, 0);
+}
+
+uint8_t camera_get_data_p(const String &post_url) {
+  HttpClient client;
+  camera_get_data(&client, [](void *ctx, uint32_t sz){
+    HttpClient &client = *(HttpClient*)ctx;
+    client.setHeader("Content-Type", "image/jpeg");
+    client.setContentLength(sz);
+    HttpResponse res = client.post_start(POST_URL);
+  }, [](void *ctx, uint8_t *buf, uint16_t len){
+    HttpClient &client = *(HttpClient*)ctx;
+    if (client.connected()) {
+      client.write(static_cast<const uint8_t*>(buf), len);
+    }
+  });
+  client.flush();
 }
 
 void handlePostPhoto() {
@@ -90,6 +117,10 @@ void upload() {
 
 void handlePostStart() {
   digitalWrite(led, 1);
+
+  camera_sync();
+  camera_init();
+  camera_snapshot();
 
   int d = atoi(server.arg("interval").c_str()) * 1000;
   if (d <= 0) {
@@ -134,7 +165,7 @@ void setup(void) {
   server.begin();
 
   HttpClient client;
-  client.get(String(HEARTBEAT_URL) + "&ip=" + WiFi.localIP());
+  client.get(String(HEARTBEAT_URL) + "&ip=" + WiFi.localIP()[0] + "." + WiFi.localIP()[1] + "." + WiFi.localIP()[2] + "." + WiFi.localIP()[3]);
   Serial.println("started");
 }
 

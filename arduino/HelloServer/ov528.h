@@ -19,6 +19,7 @@
 #define OV528_SIZE_80_60  0x01  // 80x60
 #define OV528_SIZE_OCIF   0x03  // 160x120
 #define OV528_SIZE_CIF    0x05  // 320x240
+#define OV528_SIZE_QVGA   0x05  // 320x240
 #define OV528_SIZE_VGA    0x07  // 640x480
 
 // Picture Type (OV528_CMD_GET_PIC, OV528_CMD_DATA)
@@ -28,6 +29,9 @@
 
 // (OV528_CMD_SNAPSHOT)
 #define OV528_SNAPSHOT_COMPRESSED 0x00
+
+typedef void (*SIZE_FUN)(void* ctx, uint32_t sz);
+typedef void (*WRITE_FUN)(void* ctx, uint8_t *buf, uint16_t len);
 
 #endif
 
